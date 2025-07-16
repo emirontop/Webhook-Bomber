@@ -1,0 +1,15 @@
+{
+  "name": "webhook-bomber",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "start": "next start",
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "axios": "latest"
+  }
+}
