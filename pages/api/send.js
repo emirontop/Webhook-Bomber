@@ -1,37 +1,42 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ success: false, error: "Method Not Allowed" });
-
-  const { webhook, mesaj, adet, everyone } = req.body;
-
-  if (!webhook || !mesaj || adet < 1) {
-    return res.status(400).json({ success: false, error: "Eksik veri" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false, error: "Method Not Allowed" });
   }
 
-  const finalMessage = `${mesaj}\nThis sended by Webhook Bomber → https://webhook-bomber.vercel.app/`;
+  const { webhook, count, everyone } = req.body;
+  if (!webhook || count < 1) {
+    return res.status(400).json({ success: false, error: "Geçersiz parametre" });
+  }
 
-  const payload = {
-    content: everyone ? `@everyone ${finalMessage}` : finalMessage
-  };
+  const baseMessage = "this senden by Webhook bomber https://webhook-bomber.vercel.app/";
+  let sent = 0;
 
-  let success = 0;
-  for (let i = 0; i < adet; i++) {
+  for (let i = 1; i <= count; i++) {
+    const content = everyone
+      ? `@everyone ${baseMessage}`
+      : baseMessage;
+
     try {
-      const response = await fetch(webhook, {
+      const resp = await fetch(webhook, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ content })
       });
 
-      if (!response.ok) {
-        const hata = await response.text();
-        return res.status(500).json({ success: false, error: "Mesaj gönderilemedi: " + hata });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        return res
+          .status(500)
+          .json({ success: false, error: err.message || resp.statusText });
       }
 
-      success++;
-    } catch (err) {
-      return res.status(500).json({ success: false, error: "Gönderme başarısız." });
+      sent++;
+      // 1 saniye bekleyerek rate-limit riskini azalt
+      await new Promise(r => setTimeout(r, 1000));
+    } catch (e) {
+      return res.status(500).json({ success: false, error: e.message });
     }
   }
 
-  return res.status(200).json({ success: true, sent: success });
+  return res.status(200).json({ success: true, sent, requested: count });
 }
