@@ -7,21 +7,29 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: "Eksik veri" });
   }
 
+  const finalMessage = `${mesaj}\nThis sended by Webhook Bomber → https://webhook-bomber.vercel.app/`;
+
   const payload = {
-    content: everyone ? `@everyone ${mesaj}` : mesaj
+    content: everyone ? `@everyone ${finalMessage}` : finalMessage
   };
 
   let success = 0;
   for (let i = 0; i < adet; i++) {
     try {
-      await fetch(webhook, {
+      const response = await fetch(webhook, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
+
+      if (!response.ok) {
+        const hata = await response.text();
+        return res.status(500).json({ success: false, error: "Mesaj gönderilemedi: " + hata });
+      }
+
       success++;
     } catch (err) {
-      return res.status(500).json({ success: false, error: "Gönderme başarısız" });
+      return res.status(500).json({ success: false, error: "Gönderme başarısız." });
     }
   }
 
