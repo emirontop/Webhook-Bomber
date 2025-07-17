@@ -1,276 +1,181 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function Home() {
   const [webhook, setWebhook] = useState("");
+  const [message, setMessage] = useState("");
   const [count, setCount] = useState(1);
+  const [delay, setDelay] = useState(1000);
   const [everyone, setEveryone] = useState(false);
-  const [userMessage, setUserMessage] = useState("");
   const [status, setStatus] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isSending, setIsSending] = useState(false);
 
   const baseSuffix = " this senden by Webhook bomber https://webhook-bomber.vercel.app/";
 
-  async function startSpam() {
-    if (!webhook.trim()) {
-      setStatus("❌ Lütfen geçerli webhook URL girin!");
-      return;
-    }
-    if (count < 1) {
-      setStatus("❌ Mesaj adedi en az 1 olmalı!");
-      return;
-    }
-    if (!userMessage.trim()) {
-      setStatus("❌ Lütfen mesajınızı yazın!");
+  const handleSend = async () => {
+    if (!webhook.trim() || !message.trim() || count < 1) {
+      setStatus("❌ Lütfen tüm alanları doğru doldurun!");
       return;
     }
 
     setIsSending(true);
-    setStatus("⏳ Gönderiliyor...");
+    setStatus("⏳ Gönderim başlatıldı...");
     setProgress(0);
 
     let sent = 0;
-
-    for (let i = 1; i <= count; i++) {
-      const content = (everyone ? "@everyone " : "") + userMessage.trim() + baseSuffix;
+    for (let i = 0; i < count; i++) {
+      const fullMessage = `${everyone ? "@everyone " : ""}${message.trim()}${baseSuffix}`;
       try {
         const res = await fetch(webhook, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ content: fullMessage }),
         });
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          setStatus(`❌ Hata: ${err.message || res.statusText}`);
-          setIsSending(false);
-          return;
+          setStatus(`❌ Hata oluştu: ${res.statusText}`);
+          break;
         }
         sent++;
         setProgress(sent);
       } catch (e) {
-        setStatus(`❌ Hata: ${e.message}`);
-        setIsSending(false);
-        return;
+        setStatus(`❌ Hata oluştu: ${e.message}`);
+        break;
       }
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, delay));
     }
 
-    setStatus(`✅ Gönderim tamamlandı! Toplam ${sent} mesaj gönderildi.`);
     setIsSending(false);
-  }
-
-  // Basit progress bar component
-  const ProgressBar = ({ progress, max }) => {
-    const percentage = (progress / max) * 100;
-    return (
-      <div style={{ width: "100%", height: 16, background: "#333", borderRadius: 8, overflow: "hidden", marginTop: 10 }}>
-        <div
-          style={{
-            width: `${percentage}%`,
-            height: "100%",
-            background: "#ff9900",
-            transition: "width 0.3s ease-in-out",
-            boxShadow: "0 0 10px #ff9900",
-          }}
-        />
-      </div>
-    );
+    setStatus(`✅ Gönderildi: ${sent} / ${count}`);
   };
 
   return (
     <div
       style={{
-        maxWidth: 520,
+        maxWidth: 600,
         margin: "40px auto",
-        padding: 24,
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        backgroundColor: "#121212",
-        borderRadius: 16,
+        padding: 20,
+        fontFamily: "Arial, sans-serif",
         color: "#eee",
-        boxShadow: "0 8px 30px rgba(255,153,0,0.3)",
+        backgroundColor: "#121212",
+        borderRadius: 12,
+        boxShadow: "0 4px 15px rgba(0,0,0,0.6)",
       }}
     >
-      <h1
+      <h1 style={{ textAlign: "center", color: "#ff9900" }}>🚀 Webhook Bomber</h1>
+
+      <label>Webhook URL</label>
+      <input
+        value={webhook}
+        onChange={(e) => setWebhook(e.target.value)}
+        placeholder="Webhook URL"
+        disabled={isSending}
         style={{
-          textAlign: "center",
-          marginBottom: 30,
-          color: "#ff9900",
-          fontWeight: "900",
-          letterSpacing: 2,
-          userSelect: "none",
-          textShadow: "0 0 10px #ff9900",
+          width: "100%",
+          padding: 12,
+          marginBottom: 12,
+          borderRadius: 8,
+          backgroundColor: "#222",
+          color: "#eee",
+          border: "none",
         }}
-      >
-        🚀 Webhook Bomber
-      </h1>
+      />
 
-      <label style={{ fontWeight: "600", fontSize: 14, opacity: 0.7 }}>
-        Webhook URL
-        <input
-          type="text"
-          placeholder="Webhook URL girin"
-          value={webhook}
-          onChange={(e) => setWebhook(e.target.value)}
-          disabled={isSending}
-          style={{
-            width: "100%",
-            padding: 14,
-            borderRadius: 12,
-            border: "none",
-            marginTop: 6,
-            marginBottom: 20,
-            fontSize: 16,
-            backgroundColor: "#222",
-            color: "#eee",
-            boxShadow: "inset 0 0 8px #444",
-            transition: "background-color 0.3s",
-          }}
-        />
-      </label>
-
-      <label style={{ fontWeight: "600", fontSize: 14, opacity: 0.7 }}>
-        Mesajınız
-        <textarea
-          placeholder="Göndermek istediğiniz mesajı yazın"
-          value={userMessage}
-          onChange={(e) => setUserMessage(e.target.value)}
-          disabled={isSending}
-          rows={5}
-          style={{
-            width: "100%",
-            padding: 14,
-            borderRadius: 12,
-            border: "none",
-            marginTop: 6,
-            marginBottom: 20,
-            fontSize: 16,
-            backgroundColor: "#222",
-            color: "#eee",
-            boxShadow: "inset 0 0 8px #444",
-            resize: "vertical",
-            transition: "background-color 0.3s",
-          }}
-        />
-      </label>
-
-      <label
+      <label>Mesajınız</label>
+      <textarea
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder="Mesaj yazın"
+        rows={4}
+        disabled={isSending}
         style={{
-          display: "flex",
-          alignItems: "center",
-          fontWeight: "600",
-          fontSize: 14,
-          marginBottom: 20,
-          userSelect: "none",
-          opacity: isSending ? 0.6 : 1,
-          cursor: isSending ? "not-allowed" : "pointer",
+          width: "100%",
+          padding: 12,
+          marginBottom: 12,
+          borderRadius: 8,
+          backgroundColor: "#222",
+          color: "#eee",
+          border: "none",
+          resize: "vertical",
         }}
-      >
+      />
+
+      <label>Mesaj Sayısı</label>
+      <input
+        type="number"
+        value={count}
+        min={1}
+        onChange={(e) => setCount(parseInt(e.target.value) || 1)}
+        disabled={isSending}
+        style={{
+          width: "100%",
+          padding: 12,
+          marginBottom: 12,
+          borderRadius: 8,
+          backgroundColor: "#222",
+          color: "#eee",
+          border: "none",
+        }}
+      />
+
+      <label>Bekleme Süresi (ms)</label>
+      <input
+        type="number"
+        value={delay}
+        min={100}
+        onChange={(e) => setDelay(parseInt(e.target.value) || 1000)}
+        disabled={isSending}
+        style={{
+          width: "100%",
+          padding: 12,
+          marginBottom: 12,
+          borderRadius: 8,
+          backgroundColor: "#222",
+          color: "#eee",
+          border: "none",
+        }}
+      />
+
+      <label style={{ display: "block", marginBottom: 12 }}>
         <input
           type="checkbox"
           checked={everyone}
           onChange={(e) => setEveryone(e.target.checked)}
           disabled={isSending}
-          style={{ marginRight: 12, width: 18, height: 18, cursor: "pointer" }}
+          style={{ marginRight: 8 }}
         />
-        @everyone etiketi kullan
-      </label>
-
-      <label style={{ fontWeight: "600", fontSize: 14, opacity: 0.7 }}>
-        Mesaj sayısı
-        <input
-          type="number"
-          min={1}
-          max={100}
-          value={count}
-          onChange={(e) => setCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
-          disabled={isSending}
-          style={{
-            width: "100%",
-            padding: 14,
-            borderRadius: 12,
-            border: "none",
-            marginTop: 6,
-            marginBottom: 30,
-            fontSize: 16,
-            backgroundColor: "#222",
-            color: "#eee",
-            boxShadow: "inset 0 0 8px #444",
-            transition: "background-color 0.3s",
-          }}
-        />
+        @everyone etiketle
       </label>
 
       <button
-        onClick={startSpam}
+        onClick={handleSend}
         disabled={isSending}
         style={{
           width: "100%",
-          padding: 16,
+          padding: 14,
+          borderRadius: 8,
+          border: "none",
           backgroundColor: "#ff9900",
           color: "#000",
-          fontWeight: "900",
-          fontSize: 18,
-          border: "none",
-          borderRadius: 14,
+          fontWeight: "bold",
           cursor: isSending ? "not-allowed" : "pointer",
-          boxShadow: isSending ? "none" : "0 6px 20px rgba(255,153,0,0.7)",
-          transition: "background-color 0.3s",
-          userSelect: "none",
         }}
-        onMouseEnter={(e) => !isSending && (e.target.style.backgroundColor = "#e08800")}
-        onMouseLeave={(e) => !isSending && (e.target.style.backgroundColor = "#ff9900")}
       >
-        {isSending ? `Gönderiliyor... (${progress}/${count})` : "Başlat"}
+        {isSending ? `Gönderiliyor... ${progress}/${count}` : "Başlat"}
       </button>
-
-      {isSending && <ProgressBar progress={progress} max={count} />}
 
       {status && (
         <p
           style={{
             marginTop: 20,
-            padding: 14,
-            borderRadius: 12,
-            backgroundColor: status.startsWith("❌") ? "#b30000" : "#006600",
-            color: "#fff",
-            fontWeight: "700",
             textAlign: "center",
-            userSelect: "text",
-            boxShadow: "0 0 12px rgba(0,0,0,0.4)",
-            lineHeight: 1.4,
+            fontWeight: "bold",
+            color: status.startsWith("❌") ? "#ff4c4c" : "#4caf50",
           }}
         >
           {status}
         </p>
       )}
-    </div>
-  );
-}
-
-function ProgressBar({ progress, max }) {
-  const percentage = (progress / max) * 100;
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: 18,
-        background: "#333",
-        borderRadius: 12,
-        overflow: "hidden",
-        marginTop: 16,
-        boxShadow: "inset 0 0 8px #444",
-      }}
-    >
-      <div
-        style={{
-          width: `${percentage}%`,
-          height: "100%",
-          background: "#ff9900",
-          boxShadow: "0 0 12px #ff9900",
-          transition: "width 0.3s ease-in-out",
-        }}
-      />
     </div>
   );
 }
