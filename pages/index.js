@@ -1,69 +1,74 @@
 import { useState } from "react";
-import axios from "axios";
 
 export default function Home() {
   const [webhook, setWebhook] = useState("");
-  const [mesaj, setMesaj] = useState("");
-  const [adet, setAdet] = useState(1);
+  const [count, setCount] = useState(1);
   const [everyone, setEveryone] = useState(false);
   const [status, setStatus] = useState("");
+  const [progress, setProgress] = useState(0);
 
-  const gonder = async () => {
-    if (!webhook || !mesaj || adet < 1) {
-      setStatus("Lütfen tüm alanları doldur.");
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!webhook.trim()) return setStatus("❌ Lütfen webhook URL gir.");
+    if (count < 1) return setStatus("❌ Mesaj adedi en az 1 olmalı.");
 
-    setStatus("Gönderiliyor...");
-    const res = await axios.post("/api/send", {
-      webhook,
-      mesaj,
-      adet,
-      everyone
+    setStatus("⏳ Gönderiliyor...");
+    setProgress(0);
+
+    const res = await fetch("/api/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ webhook, count, everyone })
     });
+    const data = await res.json();
 
-    if (res.data.success) {
-      setStatus("Başarıyla gönderildi!");
+    if (data.success) {
+      setStatus(`✅ Tamamlandı: ${data.sent}/${data.requested} mesaj.`);
     } else {
-      setStatus("Bir hata oluştu: " + res.data.error);
+      setStatus(`❌ Hata: ${data.error}`);
     }
   };
 
   return (
-    <div style={{ padding: 40, fontFamily: "Arial" }}>
+    <div style={{ maxWidth: 400, margin: "auto", padding: 20, fontFamily: "Arial" }}>
       <h1>Webhook Bomber</h1>
       <input
+        type="text"
         placeholder="Webhook URL"
         value={webhook}
-        onChange={(e) => setWebhook(e.target.value)}
-        style={{ display: "block", marginBottom: 10, width: "300px" }}
-      />
-      <textarea
-        placeholder="Mesaj"
-        value={mesaj}
-        onChange={(e) => setMesaj(e.target.value)}
-        style={{ display: "block", marginBottom: 10, width: "300px", height: "100px" }}
+        onChange={e => setWebhook(e.target.value)}
+        style={{ width: "100%", padding: 8, marginBottom: 10 }}
       />
       <input
         type="number"
-        placeholder="Mesaj Adedi"
-        value={adet}
-        onChange={(e) => setAdet(parseInt(e.target.value))}
-        style={{ display: "block", marginBottom: 10, width: "300px" }}
+        min={1}
+        placeholder="Mesaj adedi"
+        value={count}
+        onChange={e => setCount(parseInt(e.target.value, 10))}
+        style={{ width: "100%", padding: 8, marginBottom: 10 }}
       />
-      <label style={{ marginBottom: 10 }}>
+      <label style={{ display: "block", marginBottom: 10 }}>
         <input
           type="checkbox"
           checked={everyone}
-          onChange={(e) => setEveryone(e.target.checked)}
+          onChange={e => setEveryone(e.target.checked)}
         />{" "}
-        Herkesi (@everyone) etiketle
+        @everyone etiketle
       </label>
-      <br />
-      <button onClick={gonder} style={{ marginTop: 20, padding: "10px 20px" }}>
-        Gönder
+      <button
+        onClick={handleSubmit}
+        style={{
+          width: "100%",
+          padding: 10,
+          background: "#ff9900",
+          color: "#000",
+          fontWeight: "bold",
+          border: "none",
+          cursor: "pointer"
+        }}
+      >
+        Başlat
       </button>
-      <p style={{ marginTop: 20 }}>{status}</p>
+      {status && <p style={{ marginTop: 20 }}>{status}</p>}
     </div>
   );
-  }
+}
